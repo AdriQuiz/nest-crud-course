@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { User, UserDocument } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -10,6 +10,9 @@ export class UsersService {
     constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
     async create(createUserDto: CreateUserDto): Promise<User> {
+        const existing = await this.userModel.findOne({ email: createUserDto.email });
+        if (existing) throw new Error(`A user already exists with this email: ${createUserDto.email}`);
+
         const newUser = new this.userModel(createUserDto);
         return newUser.save();
     }
@@ -25,6 +28,15 @@ export class UsersService {
 
     async update(id: string, updateUserDto: UpdateUserDto): Promise<User | null> {
         if (!Types.ObjectId.isValid(id)) return null;
+        
+        if (updateUserDto.email) {
+            const existing = await this.userModel.findOne({
+                email: updateUserDto.email,
+                _id: { $ne: id }
+            });
+
+            if (existing) throw new ConflictException('This email address is already in use.');
+        }
         return this.userModel.findByIdAndUpdate(id, updateUserDto, { new: true }).exec();
     }
 
