@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Product, ProductDocument } from './entities/product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -21,6 +21,21 @@ export class ProductsService {
     async findOne(id: string): Promise<Product | null> {
         if (!Types.ObjectId.isValid(id)) return null;
         return this.productModel.findById(id).exec();
+    }
+
+    async updateStock(id: string, delta: number): Promise<Product> {
+        const product = await this.productModel.findById(id).exec();
+        if (!product) throw new NotFoundException(`Product with id ${id} not found.`);
+
+        const newStock = product.stock + delta;
+        if (newStock < 0) {
+            throw new BadRequestException(`Stock cannot be negative. Current stock: ${product.stock}`);
+        }
+
+        product.stock = newStock;
+        await product.save();
+
+        return product;
     }
 
     async update(id: string, updateProductDto: UpdateProductDto): Promise<Product | null> {
