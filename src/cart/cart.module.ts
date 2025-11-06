@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { CartController } from './cart.controller';
 import { CartService } from './cart.service';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -12,9 +12,10 @@ import { CartItem, CartItemSchema } from './entities/cart-item.entity';
   imports: [
     MongooseModule.forFeature([{ name: CartItem.name, schema: CartItemSchema  }]),
     UsersModule,
-    ProductsModule
+    forwardRef(() => ProductsModule)
   ],
   controllers: [CartController],
   providers: [CartService, UsersService, ProductsService],
+  exports: [CartService]
 })
 export class CartModule {}

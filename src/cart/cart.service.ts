@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CartItem, CartItemDocument } from './entities/cart-item.entity';
 import { AddCartItemDto } from './dto/add-cart-item.dto';
 import { UsersService } from 'src/users/users.service';
@@ -6,13 +6,13 @@ import { ProductsService } from 'src/products/products.service';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Product } from 'src/products/entities/product.entity';
 
 @Injectable()
 export class CartService {
     constructor(
         @InjectModel(CartItem.name) private cartItemModel: Model<CartItemDocument>,
         private readonly usersService: UsersService,
+        @Inject(forwardRef(() => ProductsService))
         private readonly productsService: ProductsService,
     ) { }
 
@@ -57,6 +57,11 @@ export class CartService {
             .find({ userId })
             .populate('productId', 'name price')
             .exec();
+    }
+
+    async removeItemsByProductId(productId: string): Promise<number> {
+        const result = await this.cartItemModel.deleteMany({ productId }).exec();
+        return result.deletedCount;
     }
 
     async updateQuantity(id: string, updateCartItemDto: UpdateCartItemDto): Promise<CartItem | null> {

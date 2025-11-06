@@ -1,13 +1,17 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Product, ProductDocument } from './entities/product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { CartService } from 'src/cart/cart.service';
 
 @Injectable()
 export class ProductsService {
-    constructor(@InjectModel(Product.name) private productModel: Model<ProductDocument>) {}
+    constructor(
+        @InjectModel(Product.name) private productModel: Model<ProductDocument>,
+        @Inject(forwardRef(() => CartService)) private readonly cartService: CartService
+    ) {}
 
     async create(createProductDto: CreateProductDto): Promise<Product> {
         const product = new this.productModel(createProductDto);
@@ -52,6 +56,8 @@ export class ProductsService {
 
     async remove(id: string): Promise<boolean> {
         if (!Types.ObjectId.isValid(id)) return false;
+
+        await this.cartService.removeItemsByProductId(id);
 
         const result = await this.productModel.findByIdAndDelete(id).exec();
         return !!result;
